@@ -17,4 +17,77 @@ public class Payment {
         CREDIT_CARD,
         INSURANCE_COVERED // Tamamı sigortadan karşılanmışsa
     }
+<<<<<<< HEAD
+=======
+    
+
+	public Payment(Long id, Long appointmentId, BigDecimal amount, BigDecimal insuranceDiscount, PaymentMethod method,
+			LocalDateTime paidAt) {
+		super();
+		this.id = id;
+		this.appointmentId = appointmentId;
+		this.amount = amount;
+		this.insuranceDiscount = insuranceDiscount;
+		this.method = method;
+		this.paidAt = paidAt;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public Long getAppointmentId() {
+		return appointmentId;
+	}
+
+	public void setAppointmentId(Long appointmentId) {
+		this.appointmentId = appointmentId;
+	}
+
+	public BigDecimal getAmount() {
+		return amount;
+	}
+
+	public void setAmount(BigDecimal amount) {
+		this.amount = amount;
+	}
+
+	public BigDecimal getInsuranceDiscount() {
+		return insuranceDiscount;
+	}
+
+	public void setInsuranceDiscount(BigDecimal insuranceDiscount) {
+		this.insuranceDiscount = insuranceDiscount;
+	}
+
+	public PaymentMethod getMethod() {
+		return method;
+	}
+
+	public void setMethod(PaymentMethod method) {
+		this.method = method;
+	}
+
+	public LocalDateTime getPaidAt() {
+		return paidAt;
+	}
+
+	public void setPaidAt(LocalDateTime paidAt) {
+		this.paidAt = paidAt;
+	}
+
+	@Override
+	public String toString() {
+		return "Payment [id=" + id + ", appointmentId=" + appointmentId + ", amount=" + amount + ", insuranceDiscount="
+				+ insuranceDiscount + ", method=" + method + ", paidAt=" + paidAt + "]";
+	}
+    
+	
+	
+    
+>>>>>>> meryem
 }
