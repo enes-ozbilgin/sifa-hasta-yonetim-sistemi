@@ -1,46 +1,14 @@
 package com.sifa.clinic.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Report {
     private Long id;
     private Long examinationId;
     private String content;
-
-    public Report(Long id, Long examinationId, String content) {
-		super();
-		this.id = id;
-		this.examinationId = examinationId;
-		this.content = content;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-
-	public Long getExaminationId() {
-		return examinationId;
-	}
-
-	public void setExaminationId(Long examinationId) {
-		this.examinationId = examinationId;
-	}
-
-	public String getContent() {
-		return content;
-	}
-
-	public void setContent(String content) {
-		this.content = content;
-	}
-	
-	@Override
-	public String toString() {
-		return "Report [id=" + id + ", examinationId=" + examinationId + ", content=" + content + "]";
-	}
-    
-    
 }
