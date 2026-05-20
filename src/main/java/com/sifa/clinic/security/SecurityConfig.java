@@ -1,48 +1,60 @@
 package com.sifa.clinic.security;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        // Şifreleri veritabanına "12345" gibi açık metin yerine karmakarışık (hashlenmiş) kaydetmemizi sağlar
-        return new BCryptPasswordEncoder();
-    }
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final AuthenticationProvider authenticationProvider;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // İleride React (Frontend) kullanacağımız için API bazlı çalışıyoruz, CSRF kapalı kalmalı
+            .cors(Customizer.withDefaults()) // 1. YENİ EKLENEN: CORS'u aktif ettik
+            .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // Herkesin erişebileceği yerler (Login ve Kayıt olma sayfaları)
-                .requestMatchers("/api/auth/**", "/login", "/register").permitAll()
-                
-                // Sadece DOKTOR rolündekiler muayene işlemlerini görebilir
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/examinations/**").hasRole("DOCTOR")
-                
-                // Sadece VEZNE (CASHIER) rolü ödeme işlemlerini yapabilir
                 .requestMatchers("/api/payments/**").hasRole("CASHIER")
-                
-                // Randevuları HASTA ve DOKTOR görebilir/yönetebilir
                 .requestMatchers("/api/appointments/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
-                
-                // Diğer kalan TÜM istekler için sisteme giriş yapmış olma (Authenticated) şartı arıyoruz
                 .anyRequest().authenticated()
             )
-            // Şimdilik test amaçlı Spring'in varsayılan Basic Auth (pencere açılan) girişini kullanıyoruz
-            // Merve buraya daha sonra JWT (JSON Web Token) filtresini ekleyecek
-            .httpBasic(Customizer.withDefaults());
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authenticationProvider(authenticationProvider)
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    // 2. YENİ EKLENEN: Hangi adreslere ve metodlara izin vereceğimizi belirten kural seti
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173")); // Sadece React'in portuna izin veriyoruz
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
