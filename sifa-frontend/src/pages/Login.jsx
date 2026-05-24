@@ -12,22 +12,28 @@ function Login() {
         e.preventDefault();
         try {
             const response = await api.post('/auth/login', { username, password });
-            const token = response.data.token;
             
-            // Token'ı kaydet
+            // Backend'den hem Token'ı hem de az önce eklediğimiz ID'yi alıyoruz
+            const token = response.data.token;
+            const userId = response.data.id; 
+            
+            // İkisini de tarayıcıya (localStorage) kaydediyoruz
             localStorage.setItem('token', token);
+            if (userId) localStorage.setItem('userId', userId);
             
             // Token'ı çöz ve rolü bul
             const decodedToken = jwtDecode(token);
             const userRole = decodedToken.role || decodedToken.authorities?.[0]?.authority;
 
-            // Role göre doğru panele yönlendir
-            if (userRole === 'ROLE_DOCTOR') {
+            // YENİ KURAL: Admin yönlendirmesi eklendi!
+            if (userRole === 'ROLE_ADMIN') {
+                navigate('/admin');
+            } else if (userRole === 'ROLE_DOCTOR') {
                 navigate('/doctor');
             } else if (userRole === 'ROLE_CASHIER') {
                 navigate('/cashier');
             } else {
-                navigate('/patient'); // Varsayılan olarak Hasta paneline at
+                navigate('/patient'); 
             }
             
         } catch (error) {

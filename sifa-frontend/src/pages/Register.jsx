@@ -9,16 +9,21 @@ function Register() {
     const navigate = useNavigate();
 
     const handleRegister = async (e) => {
-        e.preventDefault();
-        try {
-            // Backend'deki /api/auth/register ucuna istek atıyoruz
-            await api.post('/auth/register', { username, password, role });
-            alert('Kayıt başarılı! Şimdi giriş yapabilirsiniz.');
-            navigate('/login'); // Kayıt olunca login ekranına at
-        } catch (error) {
-            alert('Kayıt başarısız! Bu kullanıcı adı alınmış olabilir.');
-        }
-    };
+    e.preventDefault();
+    try {
+        const response = await api.post('/auth/register', { username, password, role });
+    
+    // Backend'den dönen ID'yi yakalıyoruz
+        const generatedId = response.data.id; 
+    
+        alert(`Kayıt Başarılı! Sistetteki Benzersiz ID Numaranız: ${generatedId}\nLütfen bu ID'yi vezne işlemlerinde kullanın.`);
+    
+        localStorage.setItem('token', response.data.token);
+        // Yönlendirme mantığı...
+    } catch (error) {
+        alert("Kayıt başarısız!");
+    }
+};
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
