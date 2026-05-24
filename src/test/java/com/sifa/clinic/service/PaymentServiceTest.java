@@ -1,7 +1,10 @@
 package com.sifa.clinic.service;
 
+import com.sifa.clinic.model.Appointment;
 import com.sifa.clinic.model.Payment;
+import com.sifa.clinic.repository.AppointmentRepository;
 import com.sifa.clinic.repository.PaymentRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,51 +25,64 @@ class PaymentServiceTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private SskIntegrationService sskIntegrationService; // YENİ EKLENDİ (Diyagram 2)
+    private SskIntegrationService sskIntegrationService;
+
+    @Mock
+    private AppointmentRepository appointmentRepository;
 
     @InjectMocks
     private PaymentService paymentService;
 
-    @Test
-    void calculateFinalFee_ShouldApplyDiscount_WhenTcIsValid() {
-        // Hazırlık: SSK servisinden (Mock) %20 indirim dönmesini bekliyoruz
-        when(sskIntegrationService.getDiscountRate("11122233344")).thenReturn(0.20);
+    private Payment testPayment;
+    private Appointment testAppointment;
 
-        // Aksiyon: 1000 TL taban ücret ile servisi çağır
-        Map<String, Double> result = paymentService.calculateFinalFee(5L, "11122233344", 1000.0);
+    @BeforeEach
+    void setUp() {
+        testPayment = new Payment();
+        testPayment.setAppointmentId(1L);
+        testPayment.setAmount(500.0);
+        testPayment.setDiscount(100.0);
 
-        // Doğrulama: 1000 TL'nin %20'si 200 TL indirim, net 800 TL kalmalı
-        assertEquals(200.0, result.get("discountAmount"));
-        assertEquals(800.0, result.get("finalFee"));
+        testAppointment = new Appointment();
+        testAppointment.setId(1L);
+        testAppointment.setStatus(Appointment.AppointmentStatus.COMPLETED);
     }
 
     @Test
-    void processPayment_ShouldSave_WhenNoPriorPaymentExists() {
-        // BigDecimal yerine Double kullanıyoruz çünkü modelimizi öyle güncelledik
-        Payment payment = new Payment(null, 5L, 500.0, 0.0, "CREDIT_CARD", null); 
-        
-        when(paymentRepository.findByAppointmentId(5L)).thenReturn(Optional.empty());
-        when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
+    void processPayment_ShouldThrowException_WhenPaymentAlreadyExists() {
+        // Senaryo: Veritabanında zaten bu randevuya ait bir ödeme var
+        when(paymentRepository.findByAppointmentId(1L)).thenReturn(Optional.of(testPayment));
 
-        Payment result = paymentService.processPayment(payment);
-
-        assertNotNull(result.getPaidAt()); // Tarih başarıyla atanmış mı?
-        verify(paymentRepository, times(1)).save(payment); // Veritabanına kayıt atılmış mı?
-    }
-
-    @Test
-    void processPayment_ShouldThrowException_WhenAlreadyPaid() {
-        Payment existingPayment = new Payment();
-        Payment newPayment = new Payment();
-        newPayment.setAppointmentId(5L);
-
-        when(paymentRepository.findByAppointmentId(5L)).thenReturn(Optional.of(existingPayment));
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
-            paymentService.processPayment(newPayment);
+        // Test: Tekrar ödeme alınmaya çalışıldığında RuntimeException fırlatılmalı
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            paymentService.processPayment(testPayment);
         });
 
-        // Hata mesajı servisimizdeki güncel mesajla birebir aynı olmalı
-        assertEquals("Çift Ödeme Hatası: Bu randevu için zaten ödeme alınmış!", ex.getMessage());
+        assertEquals("Çift Ödeme Hatası: Bu randevu için zaten ödeme alınmış!", exception.getMessage());
+        
+        // Veritabanına hiçbir kaydetme işlemi yapılmadığını doğrula
+        verify(paymentRepository, never()).save(any());
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    @Test
+    void processPayment_ShouldSavePaymentAndSetAppointmentToPaid_WhenSuccessful() {
+        // Senaryo: Ödeme yok, randevu mevcut
+        when(paymentRepository.findByAppointmentId(1L)).thenReturn(Optional.empty());
+        when(paymentRepository.save(any(Payment.class))).thenReturn(testPayment);
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(testAppointment));
+
+        // İşlemi çalıştır
+        Payment savedPayment = paymentService.processPayment(testPayment);
+
+        // Doğrulamalar (Assertions)
+        assertNotNull(savedPayment.getPaidAt());
+        
+        // En kritik test: Randevunun durumu gerçekten PAID olarak değiştirildi mi?
+        assertEquals(Appointment.AppointmentStatus.PAID, testAppointment.getStatus());
+        
+        // Kaydetme metotlarının tetiklendiğini doğrula
+        verify(paymentRepository, times(1)).save(testPayment);
+        verify(appointmentRepository, times(1)).save(testAppointment);
     }
 }

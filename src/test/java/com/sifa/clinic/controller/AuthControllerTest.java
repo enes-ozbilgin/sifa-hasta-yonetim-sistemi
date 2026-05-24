@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -39,16 +40,23 @@ class AuthControllerTest {
     private AuthController authController;
 
     @Test
-    void register_ShouldReturnToken_WhenUserIsNew() {
+    void register_ShouldReturnTokenAndId_WhenUserIsNew() {
         // Hazırlık
         RegisterRequest request = new RegisterRequest();
         request.setUsername("doktor_ali");
         request.setPassword("12345");
         request.setRole(Role.DOCTOR);
 
+        AppUser mockSavedUser = new AppUser(5L, "doktor_ali", "hashed_password", Role.DOCTOR);
+
         when(userRepository.findByUsername(request.getUsername())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(any())).thenReturn("hashed_password");
-        when(jwtService.generateToken(any())).thenReturn("fake-jwt-token");
+        
+        // GÜNCELLEME: userRepository.save()'i mockladık ki ID dönebilsin
+        when(userRepository.save(any(AppUser.class))).thenReturn(mockSavedUser);
+        
+        // JwtService artık AppUser değil UserDetails bekliyor, onu mockladık
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn("fake-jwt-token");
 
         // Aksiyon
         ResponseEntity<AuthResponse> response = authController.register(request);
@@ -57,19 +65,22 @@ class AuthControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("fake-jwt-token", response.getBody().getToken());
+        
+        // GÜNCELLEME: Yeni eklediğimiz ID'nin döndüğünü de doğruluyoruz
+        assertEquals(5L, response.getBody().getId()); 
     }
 
     @Test
-    void login_ShouldReturnToken_WhenCredentialsAreValid() {
+    void login_ShouldReturnTokenAndId_WhenCredentialsAreValid() {
         // Hazırlık
         LoginRequest request = new LoginRequest();
         request.setUsername("doktor_ali");
         request.setPassword("12345");
 
-        AppUser mockUser = new AppUser(1L, "doktor_ali", "hashed_password", Role.DOCTOR);
+        AppUser mockUser = new AppUser(5L, "doktor_ali", "hashed_password", Role.DOCTOR);
         
         when(userRepository.findByUsername(request.getUsername())).thenReturn(Optional.of(mockUser));
-        when(jwtService.generateToken(any())).thenReturn("fake-jwt-token");
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn("fake-jwt-token");
 
         // Aksiyon
         ResponseEntity<AuthResponse> response = authController.login(request);
@@ -78,5 +89,8 @@ class AuthControllerTest {
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("fake-jwt-token", response.getBody().getToken());
+        
+        // GÜNCELLEME: Giriş yaparken de ID'nin döndüğünü doğruluyoruz
+        assertEquals(5L, response.getBody().getId());
     }
 }
