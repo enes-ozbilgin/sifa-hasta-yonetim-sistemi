@@ -4,7 +4,9 @@ import com.sifa.clinic.model.AppUser;
 import com.sifa.clinic.model.Role;
 import com.sifa.clinic.repository.UserRepository;
 import com.sifa.clinic.security.JwtService;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,17 +36,23 @@ public class AuthController {
 
         AppUser user = new AppUser();
         user.setUsername(request.getUsername());
-        user.setPassword(passwordEncoder.encode(request.getPassword())); // Şifreyi açık kaydetmek yasak!
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
-        
-        userRepository.save(user);
 
-        // Kullanıcıya hemen token ver
-        String jwtToken = jwtService.generateToken(
-                User.builder().username(user.getUsername()).password(user.getPassword()).roles(user.getRole().name()).build()
-        );
+        // Kaydedilen kullanıcı nesnesini yakalıyoruz (ID bu aşamada oluşur)
+        AppUser savedUser = userRepository.save(user); 
         
-        return ResponseEntity.ok(new AuthResponse(jwtToken));
+        // Spring Security'nin anlaması için bizim AppUser'ı UserDetails formatına çeviriyoruz
+        org.springframework.security.core.userdetails.UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                .username(savedUser.getUsername())
+                .password(savedUser.getPassword())
+                .roles(savedUser.getRole().name())
+                .build();
+
+        String token = jwtService.generateToken(userDetails);
+
+        // Token ve ID'yi birlikte fırlatıyoruz
+        return ResponseEntity.ok(new AuthResponse(token, savedUser.getId()));
     }
 
     @PostMapping("/login")
@@ -59,7 +67,8 @@ public class AuthController {
                 User.builder().username(user.getUsername()).password(user.getPassword()).roles(user.getRole().name()).build()
         );
         
-        return ResponseEntity.ok(new AuthResponse(jwtToken));
+        // GÜNCELLEME: Login işleminde de ID'yi döndürüyoruz!
+        return ResponseEntity.ok(new AuthResponse(jwtToken, user.getId()));
     }
 }
 
@@ -78,6 +87,9 @@ class LoginRequest {
 }
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 class AuthResponse {
-    private final String token;
+    private String token;
+    private Long id; // YENİ EKLENDİ: Artık iki parametreyi de sorunsuz alabilir
 }

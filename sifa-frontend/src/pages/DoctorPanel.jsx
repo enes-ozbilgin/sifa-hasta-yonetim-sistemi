@@ -10,16 +10,20 @@ function DoctorPanel() {
   const [notes, setNotes] = useState('');
   const navigate = useNavigate();
 
-  // Sayfa açıldığında bekleyen randevuları çek
+  // Login olurken localStorage'a kaydettiğimiz Doktor ID'si
+  const doctorId = localStorage.getItem('userId');
+
+  // Sayfa açıldığında SADECE BU DOKTORA AİT randevuları çek
   useEffect(() => {
-    fetchAppointments();
-  }, []);
+    if (doctorId) {
+      fetchAppointments();
+    }
+  }, [doctorId]);
 
   const fetchAppointments = async () => {
     try {
-      // Şimdilik test için genel randevu listesini çekiyoruz
-      // Gerçek senaryoda doktor kendi ID'sine göre filtreler
-      const response = await api.get('/appointments/patient/1'); 
+      // GÜNCELLEME: Sadece giriş yapan doktorun randevuları geliyor
+      const response = await api.get(`/appointments/doctor/${doctorId}`); 
       setAppointments(response.data);
     } catch (error) {
       console.error("Randevular yüklenemedi", error);
@@ -53,6 +57,7 @@ function DoctorPanel() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userId'); // ID'yi de temizle
     navigate('/login');
   };
 

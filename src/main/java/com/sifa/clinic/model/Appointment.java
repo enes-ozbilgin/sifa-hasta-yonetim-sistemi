@@ -24,8 +24,9 @@ public class Appointment {
     private AppointmentStatus status; 
 
     public enum AppointmentStatus {
-        SCHEDULED,
-        COMPLETED,
-        CANCELED
+        SCHEDULED, // Bekliyor
+        COMPLETED, // Muayene Edildi
+        PAID,      // Ödemesi Alındı
+        CANCELED   // İptal Edildi
     }
 }

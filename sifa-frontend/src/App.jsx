@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import DoctorPanel from './pages/DoctorPanel';
 import PatientPanel from './pages/PatientPanel';
 import CashierPanel from './pages/CashierPanel';
+import AdminPanel from './pages/AdminPanel';
 
 // Gümrük Memuru Bileşenimiz: Token yoksa veya rol yetmiyorsa Login'e şutlar
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -61,6 +62,13 @@ function App() {
             <CashierPanel />
           </ProtectedRoute>
         } />
+
+        {/* Sadece ADMIN Rolüne Açık Sayfalar (Enes'in Modülü) */}
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+            <AdminPanel />
+          </ProtectedRoute>
+          } />
       </Routes>
     </Router>
   );

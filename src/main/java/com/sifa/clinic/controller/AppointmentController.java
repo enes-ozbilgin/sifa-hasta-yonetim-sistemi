@@ -18,9 +18,15 @@ public class AppointmentController {
 
     // Belirli bir hastanın randevularını getir
     // Kullanımı: GET http://localhost:8080/api/appointments/patient/1
-    @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<Appointment>> getPatientAppointments(@PathVariable Long patientId) {
-        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId));
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<Appointment>> getDoctorAppointments(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByDoctorId(doctorId));
+    }
+    
+    // Frontend'den /api/appointments adresine GET isteği atıldığında tüm listeyi döner
+    @GetMapping
+    public ResponseEntity<List<Appointment>> getAllAppointments() {
+        return ResponseEntity.ok(appointmentService.getAllAppointments());
     }
 
     // Yeni randevu oluştur
